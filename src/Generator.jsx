@@ -43,6 +43,7 @@ async function fetchVoices(apiKey) {
       desc: (v.labels?.description || v.labels?.accent || "AI voice"),
       gender: v.labels?.gender || "unknown",
       tag: tags[i % tags.length],
+      previewUrl: v.preview_url || null,
     }));
   } catch (e) {
     return null;
@@ -94,6 +95,42 @@ async function generateSpeech(text, voiceId, apiKey, onProgress) {
   const blob = await response.blob();
   onProgress("Audio ready!");
   return blob;
+}
+
+function VoicePreviewButton({ previewUrl }) {
+  const [playing, setPlaying] = useState(false);
+  const audioRef = useRef(null);
+
+  const toggle = () => {
+    if (!previewUrl) return;
+    if (!audioRef.current) {
+      audioRef.current = new Audio(previewUrl);
+      audioRef.current.addEventListener("ended", () => setPlaying(false));
+    }
+    if (playing) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      setPlaying(false);
+    } else {
+      audioRef.current.play().catch(() => {});
+      setPlaying(true);
+    }
+  };
+
+  useEffect(() => {
+    return () => { audioRef.current?.pause(); };
+  }, []);
+
+  if (!previewUrl) return null;
+  return (
+    <button onClick={(e) => { e.stopPropagation(); toggle(); }} style={{
+      marginTop: "10px", padding: "6px 16px", borderRadius: "8px", cursor: "pointer",
+      background: playing ? "rgba(196,168,130,0.25)" : "rgba(255,255,255,0.08)",
+      border: playing ? "1px solid rgba(196,168,130,0.4)" : "1px solid rgba(255,255,255,0.12)",
+      color: playing ? "#C4A882" : "rgba(255,255,255,0.5)", fontSize: "11px", fontWeight: 600,
+      fontFamily: "'Quicksand', sans-serif", transition: "all 0.2s",
+    }}>{playing ? "Stop" : "Preview"}</button>
+  );
 }
 
 function FloatingOrbs() {
@@ -305,7 +342,7 @@ export default function Generator({ onBack }) {
   const [subSymptoms, setSubSymptoms] = useState([]);
   const [selectedVoice, setSelectedVoice] = useState(null);
   const [showPayment, setShowPayment] = useState(false);
-  const [donationAmount, setDonationAmount] = useState(4);
+  // Stripe checkout will be integrated later for $8 payment
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [paymentComplete, setPaymentComplete] = useState(false);
   const [premiumCart, setPremiumCart] = useState(null);
@@ -497,6 +534,7 @@ export default function Generator({ onBack }) {
                         <div style={{ fontSize: "15px", fontWeight: 700, marginBottom: "2px" }}>{v.name}</div>
                         <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "12px", marginBottom: "8px" }}>{v.desc}</div>
                         <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: "6px", background: "rgba(124,154,130,0.15)", fontSize: "10px", fontWeight: 700, color: "#A8C5AE", textTransform: "uppercase", letterSpacing: "1px" }}>{v.tag}</span>
+                        <VoicePreviewButton previewUrl={v.previewUrl} />
                       </GlassCard>
                     );
                   })}
@@ -540,7 +578,7 @@ export default function Generator({ onBack }) {
 
             {/* NAV BUTTONS */}
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: "48px", gap: "16px" }}>
-              {step > 0 && <button onClick={() => { setStep(s => s - 1); setAudioBlob(null); }} style={{ padding: "14px 32px", borderRadius: "14px", cursor: "pointer", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#A8C5AE", fontSize: "15px", fontWeight: 600, fontFamily: "'Quicksand', sans-serif" }}>← Back</button>}
+              {step > 0 && <button onClick={() => { setStep(s => s - 1); setAudioBlob(null); }} style={{ padding: "14px 32px", borderRadius: "14px", cursor: "pointer", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#A8C5AE", fontSize: "15px", fontWeight: 600, fontFamily: "'Quicksand', sans-serif" }}>{step === 4 ? "Edit Choices" : "\u2190 Back"}</button>}
               <div style={{ flex: 1 }} />
               {step < 4 ? (
                 <button disabled={!canProceed()} onClick={() => setStep(s => s + 1)} style={{
@@ -548,14 +586,14 @@ export default function Generator({ onBack }) {
                   background: canProceed() ? "linear-gradient(135deg, #7C9A82, #4A6B50)" : "rgba(255,255,255,0.06)",
                   border: "none", color: "#fff", fontSize: "15px", fontWeight: 700, fontFamily: "'Quicksand', sans-serif",
                   opacity: canProceed() ? 1 : 0.4, boxShadow: canProceed() ? "0 4px 20px rgba(124,154,130,0.4)" : "none",
-                }}>Continue →</button>
+                }}>Continue \u2192</button>
               ) : (
                 <button onClick={() => setShowPayment(true)} disabled={!audioBlob} style={{
                   padding: "14px 40px", borderRadius: "14px", cursor: audioBlob ? "pointer" : "not-allowed",
                   background: audioBlob ? "linear-gradient(135deg, #7C9A82, #C4A882)" : "rgba(255,255,255,0.1)",
                   border: "none", color: "#fff", fontSize: "15px", fontWeight: 700, fontFamily: "'Quicksand', sans-serif",
                   opacity: audioBlob ? 1 : 0.4, boxShadow: audioBlob ? "0 4px 30px rgba(124,154,130,0.5)" : "none",
-                }}>Download Full Session →</button>
+                }}>Download Full Session \u2192</button>
               )}
             </div>
           </>
@@ -565,47 +603,40 @@ export default function Generator({ onBack }) {
         {activePage === "create" && showPayment && !paymentComplete && (
           <div style={{ animation: "fadeUp 0.6s ease", maxWidth: "500px", margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: "40px" }}>
-              <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "32px", fontWeight: 600, marginBottom: "8px" }}>Download Your Session</h2>
-              <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "15px" }}>Mind Refuge is donation-based. Pay what feels right — minimum $4.</p>
+              <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "32px", fontWeight: 600, marginBottom: "8px" }}>Download Your Full Session</h2>
+              <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "15px" }}>One-time payment. Lifetime access to your personalized hypnosis.</p>
             </div>
             <GlassCard style={{ padding: "32px" }}>
-              <div style={{ marginBottom: "24px" }}>
-                <label style={{ display: "block", color: "rgba(255,255,255,0.4)", fontSize: "12px", textTransform: "uppercase", letterSpacing: "2px", marginBottom: "12px" }}>Choose your contribution</label>
-                <div style={{ display: "flex", gap: "10px", marginBottom: "16px" }}>
-                  {[4, 8, 12, 20].map(amt => (
-                    <button key={amt} onClick={() => setDonationAmount(amt)} style={{
-                      flex: 1, padding: "14px 8px", borderRadius: "12px", cursor: "pointer",
-                      background: donationAmount === amt ? "linear-gradient(135deg, #7C9A82, #4A6B50)" : "rgba(255,255,255,0.05)",
-                      border: donationAmount === amt ? "none" : "1px solid rgba(255,255,255,0.1)",
-                      color: "#fff", fontSize: "18px", fontWeight: 700, fontFamily: "'Quicksand', sans-serif",
-                    }}>${amt}</button>
-                  ))}
-                </div>
-                <div style={{ position: "relative" }}>
-                  <span style={{ position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)", color: "rgba(255,255,255,0.4)", fontSize: "18px" }}>$</span>
-                  <input type="number" min="4" value={donationAmount} onChange={e => setDonationAmount(Math.max(4, parseInt(e.target.value) || 4))} style={{ ...IS, fontSize: "18px", paddingLeft: "32px" }} />
-                </div>
+              <div style={{ textAlign: "center", marginBottom: "28px" }}>
+                <div style={{ fontSize: "48px", fontWeight: 800, color: "#A8C5AE", fontFamily: "'Quicksand', sans-serif", marginBottom: "4px" }}>$8</div>
+                <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "14px" }}>One-time payment</div>
               </div>
-              <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "20px", marginBottom: "24px" }}>
-                <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "2px", marginBottom: "12px" }}>Card Details</div>
-                <input placeholder="Card number" style={{ ...IS, marginBottom: "10px" }} />
-                <div style={{ display: "flex", gap: "10px" }}>
-                  <input placeholder="MM / YY" style={IS} />
-                  <input placeholder="CVC" style={IS} />
-                </div>
+              <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "20px", marginBottom: "20px" }}>
+                {[
+                  "Full 20-minute personalized session",
+                  "High-quality MP3 download",
+                  "Lifetime access — download anytime",
+                  "AI voice by ElevenLabs",
+                ].map((item, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 0", fontSize: "14px", color: "rgba(255,255,255,0.7)" }}>
+                    <span style={{ color: "#7C9A82", fontSize: "16px" }}>&#10003;</span>
+                    {item}
+                  </div>
+                ))}
               </div>
               <button onClick={handlePayment} disabled={paymentProcessing} style={{
                 width: "100%", padding: "16px", borderRadius: "14px", cursor: paymentProcessing ? "wait" : "pointer",
                 background: paymentProcessing ? "rgba(124,154,130,0.3)" : "linear-gradient(135deg, #7C9A82, #C4A882)",
                 border: "none", color: "#fff", fontSize: "16px", fontWeight: 700, fontFamily: "'Quicksand', sans-serif",
                 boxShadow: "0 4px 30px rgba(124,154,130,0.4)",
-              }}>{paymentProcessing ? "Processing..." : "Pay $" + donationAmount + " & Download MP3"}</button>
+              }}>{paymentProcessing ? "Processing..." : "Pay $8 & Download MP3"}</button>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginTop: "16px" }}>
                 <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.3)" }}>Secured by</span>
                 <span style={{ fontSize: "14px", fontWeight: 700, color: "rgba(124,154,130,0.6)" }}>Stripe</span>
               </div>
+              <p style={{ textAlign: "center", fontSize: "11px", color: "rgba(255,255,255,0.25)", marginTop: "12px" }}>Stripe checkout will be configured soon. This is a preview of the payment flow.</p>
             </GlassCard>
-            <button onClick={() => setShowPayment(false)} style={{ display: "block", margin: "20px auto 0", padding: "10px 24px", background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: "14px", fontFamily: "'Quicksand', sans-serif" }}>← Back to preview</button>
+            <button onClick={() => setShowPayment(false)} style={{ display: "block", margin: "20px auto 0", padding: "10px 24px", background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: "14px", fontFamily: "'Quicksand', sans-serif" }}>&#8592; Back to preview</button>
           </div>
         )}
 
