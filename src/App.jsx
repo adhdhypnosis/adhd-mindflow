@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import { HashRouter, Routes, Route, useNavigate } from "react-router-dom";
 import Landing from "./Landing.jsx";
 import Generator from "./Generator.jsx";
 import SymptomLandingPage from "./pages/SymptomLandingPage.jsx";
@@ -20,7 +20,7 @@ function SymptomPage({ slug }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Routes>
         <Route path="/" element={<LandingWrapper />} />
         <Route path="/hypnosis-generator" element={<GeneratorWrapper />} />
@@ -33,6 +33,6 @@ export default function App() {
           />
         ))}
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
