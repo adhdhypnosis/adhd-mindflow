@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 
 // ─── SEO CONFIG ───
 const SEO = {
@@ -207,27 +208,40 @@ const SmallSparkle = ({ style }) => (
 
 // ─── UI COMPONENTS ───
 
-const CTAButton = ({ children, variant = "primary", large, onClick }) => {
+const CTAButton = ({ children, variant = "primary", large, onClick, to }) => {
   const [h, setH] = useState(false);
   const p = variant === "primary";
+  const style = {
+    padding: large ? "20px 48px" : p ? "18px 44px" : "14px 36px",
+    fontSize: large ? 18 : p ? 16 : 14,
+    fontFamily: "'Poppins', sans-serif",
+    fontWeight: 600,
+    border: p ? "none" : `2px solid ${SAGE}`,
+    borderRadius: 60,
+    cursor: "pointer",
+    background: p ? (h ? SAGE_DEEP : SAGE) : h ? SAGE_PALE : "transparent",
+    color: p ? WHITE : SAGE_DEEP,
+    transition: "all 0.3s ease",
+    letterSpacing: "0.01em",
+    transform: h ? "translateY(-2px)" : "translateY(0)",
+    textDecoration: "none",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+  };
+  if (to) {
+    return (
+      <Link to={to} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)} style={style}>{children}</Link>
+    );
+  }
   return (
     <button
       onClick={onClick}
       onMouseEnter={() => setH(true)}
       onMouseLeave={() => setH(false)}
       style={{
-        padding: large ? "20px 48px" : p ? "18px 44px" : "14px 36px",
-        fontSize: large ? 18 : p ? 16 : 14,
-        fontFamily: "'Poppins', sans-serif",
-        fontWeight: 600,
-        border: p ? "none" : `2px solid ${SAGE}`,
-        borderRadius: 60,
-        cursor: "pointer",
-        background: p ? (h ? SAGE_DEEP : SAGE) : h ? SAGE_PALE : "transparent",
-        color: p ? WHITE : SAGE_DEEP,
-        transition: "all 0.3s ease",
-        letterSpacing: "0.01em",
-        transform: h ? "translateY(-2px)" : "translateY(0)",
+        ...style,
+        // button-specific resets already handled above
         boxShadow: h && p ? `0 10px 35px ${SAGE}40` : "none",
         display: "inline-flex",
         alignItems: "center",
@@ -298,7 +312,7 @@ const TestimonialCard = ({ quote, name, detail }) => (
 );
 
 // ─── MAIN PAGE ───
-export default function MindRefugeLanding({ onOpenGenerator }) {
+export default function MindRefugeLanding() {
   useEffect(() => {
     const style = document.createElement("style");
     style.textContent = `
@@ -378,7 +392,7 @@ export default function MindRefugeLanding({ onOpenGenerator }) {
             }}>M</div>
             <span style={{ fontSize: 17, fontWeight: 600, color: TEXT_DARK, letterSpacing: "-0.01em" }}>Mind Refuge</span>
           </div>
-          <CTAButton variant="secondary" onClick={onOpenGenerator}>Open the App →</CTAButton>
+          <CTAButton variant="secondary" to="/hypnosis-generator">Open the App →</CTAButton>
         </div>
       </nav>
 
@@ -420,7 +434,7 @@ export default function MindRefugeLanding({ onOpenGenerator }) {
             </p>
 
             <div style={{ animation: "fadeUp 0.7s ease 0.3s both", marginBottom: 18 }}>
-              <CTAButton large onClick={onOpenGenerator}>Build your self-hypnosis for free</CTAButton>
+              <CTAButton large to="/hypnosis-generator">Build your self-hypnosis for free</CTAButton>
             </div>
 
             <div style={{
@@ -535,7 +549,7 @@ export default function MindRefugeLanding({ onOpenGenerator }) {
               desc="With each session, your brain builds new neural pathways. The space between trigger and reaction gets a little wider every time." />
           </div>
           <div style={{ textAlign: "center", marginTop: 52 }}>
-            <CTAButton large onClick={onOpenGenerator}>Build your self-hypnosis for free</CTAButton>
+            <CTAButton large to="/hypnosis-generator">Build your self-hypnosis for free</CTAButton>
           </div>
         </div>
       </div>
@@ -645,7 +659,7 @@ export default function MindRefugeLanding({ onOpenGenerator }) {
             Your emotions are valid. They just need a wider channel to flow through.
             Mind Refuge helps you build that — 25 minutes at a time.
           </p>
-          <CTAButton large onClick={onOpenGenerator}>Build your self-hypnosis for free</CTAButton>
+          <CTAButton large to="/hypnosis-generator">Build your self-hypnosis for free</CTAButton>
           <p style={{ fontSize: 13, color: TEXT_LIGHT, marginTop: 14 }}>
             No account needed · Works on any device · Cancel anytime
           </p>
