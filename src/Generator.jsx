@@ -50,6 +50,17 @@ async function fetchVoices(apiKey) {
   }
 }
 
+const SAFE_PLACE_OPTIONS = [
+  { id: "forest", label: "Forest", icon: "\uD83C\uDF32" },
+  { id: "beach", label: "Beach", icon: "\uD83C\uDFD6\uFE0F" },
+  { id: "cozy-room", label: "Cozy Room", icon: "\uD83D\uDECB\uFE0F" },
+  { id: "mountains", label: "Mountains", icon: "\u26F0\uFE0F" },
+  { id: "cabin", label: "Cabin", icon: "\uD83C\uDFE1" },
+  { id: "garden", label: "Garden", icon: "\uD83C\uDF3B" },
+  { id: "library", label: "Library", icon: "\uD83D\uDCDA" },
+  { id: "lakeside", label: "Lakeside", icon: "\uD83C\uDFDE\uFE0F" },
+];
+
 const PREMIUM_TRACKS = [
   { id: "p1", title: "Soothe Stress & Anxiety", therapist: "Dr. Sarah Mitchell", duration: "22 min", price: 20, color: "#7ecec1", icon: "🍃" },
   { id: "p2", title: "Boost Self-Esteem", therapist: "James Harlow, CHt", duration: "25 min", price: 20, color: "#d4a574", icon: "✨" },
@@ -340,6 +351,10 @@ export default function Generator({ onBack }) {
   const [name, setName] = useState("");
   const [mainSymptom, setMainSymptom] = useState(null);
   const [subSymptoms, setSubSymptoms] = useState([]);
+  const [trigger, setTrigger] = useState("");
+  const [safePlace, setSafePlace] = useState("");
+  const [bodyCue1, setBodyCue1] = useState("");
+  const [bodyCue2, setBodyCue2] = useState("");
   const [selectedVoice, setSelectedVoice] = useState(null);
   const [showPayment, setShowPayment] = useState(false);
   // Stripe checkout will be integrated later for $8 payment
@@ -392,10 +407,12 @@ export default function Generator({ onBack }) {
   };
 
   const canProceed = () => {
-    if (step === 0) return name.trim().length > 0;
-    if (step === 1) return mainSymptom !== null;
-    if (step === 2) return subSymptoms.length > 0;
-    if (step === 3) return selectedVoice !== null;
+    if (step === 0) return mainSymptom !== null;
+    if (step === 1) return subSymptoms.length > 0;
+    if (step === 2) return trigger.trim().length > 0;
+    if (step === 3) return true; // safe space is optional
+    if (step === 4) return true; // body cues are optional
+    if (step === 5) return selectedVoice !== null;
     return true;
   };
 
@@ -414,7 +431,7 @@ export default function Generator({ onBack }) {
         <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
           {[{ key: "create", label: "Create Session" }, { key: "premium", label: "Premium Library" }].map(tab => (
             <button key={tab.key} onClick={() => { setActivePage(tab.key); if (tab.key === "create") { setStep(0); setShowPayment(false); setPaymentComplete(false); } }}
-              style={{ padding: "8px 20px", borderRadius: "12px", border: "none", cursor: "pointer", fontSize: "14px", fontWeight: 600, fontFamily: "'Quicksand', sans-serif", background: activePage === tab.key ? "rgba(124,154,130,0.25)" : "transparent", color: activePage === tab.key ? "#A8C5AE" : "rgba(255,255,255,0.5)", transition: "all 0.3s" }}>{tab.label}</button>
+              style={{ padding: "8px 20px", borderRadius: "12px", border: "none", cursor: "pointer", fontSize: "14px", fontWeight: 600, fontFamily: "'Quicksand', sans-serif", background: activePage === tab.key ? "rgba(124,154,130,0.25)" : "transparent", color: activePage === tab.key ? "#A8C5AE" : "rgba(255,255,255,0.5)", transition: "all 0.3s" }}>{tab.label}{tab.key === "premium" && <span style={{ marginLeft: "6px", padding: "2px 6px", borderRadius: "4px", background: "rgba(196,168,130,0.2)", color: "#C4A882", fontSize: "10px", fontWeight: 700 }}>PRO</span>}</button>
           ))}
           <button onClick={() => setShowApiPanel(true)} style={{
             padding: "8px 14px", borderRadius: "10px", border: "none", cursor: "pointer",
@@ -428,34 +445,16 @@ export default function Generator({ onBack }) {
       </nav>
 
       <div style={{ maxWidth: "900px", margin: "0 auto", padding: "40px 24px 80px", position: "relative", zIndex: 1 }}>
-        {/* DISCLAIMER */}
-        <div style={{ background: "rgba(212,165,116,0.08)", border: "1px solid rgba(212,165,116,0.2)", borderRadius: "12px", padding: "12px 16px", marginBottom: "32px", fontSize: "12px", color: "rgba(212,165,116,0.8)", lineHeight: 1.6 }}>
-          ⚕️ <strong>Disclaimer:</strong> Mind Refuge is a wellness tool, not a substitute for professional medical or psychological treatment. If you have ADHD or suspect you do, please consult a licensed healthcare provider.
-        </div>
-
-        {/* ═══ CREATE SESSION ═══ */}
+{/* ═══ CREATE SESSION ═══ */}
         {activePage === "create" && !showPayment && !paymentComplete && (
           <>
-            <ProgressBar step={step} total={5} />
+            <ProgressBar step={step} total={7} />
 
+            {/* Step 0: Main Symptoms */}
             {step === 0 && (
-              <div style={{ textAlign: "center", animation: "fadeUp 0.6s ease" }}>
-                <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(32px, 5vw, 48px)", fontWeight: 600, marginBottom: "12px", background: "linear-gradient(135deg, #A8C5AE, #C4A882)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Your Journey Begins Here</h1>
-                <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "17px", maxWidth: "500px", margin: "0 auto 48px" }}>Create a self-hypnosis session tailored to your unique mind.</p>
-                <div style={{ maxWidth: "400px", margin: "0 auto" }}>
-                  <label style={{ display: "block", color: "rgba(255,255,255,0.4)", fontSize: "13px", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "2px" }}>What is your first name?</label>
-                  <input value={name} onChange={e => setName(e.target.value)} placeholder="Enter your name..."
-                    style={{ ...IS, fontSize: "20px", textAlign: "center", padding: "18px 24px", borderRadius: "16px" }}
-                    onFocus={e => e.target.style.borderColor = "rgba(124,154,130,0.5)"} onBlur={e => e.target.style.borderColor = "rgba(255,255,255,0.1)"} />
-                  <p style={{ color: "rgba(255,255,255,0.3)", fontSize: "13px", marginTop: "12px" }}>Your name will be woven into the hypnosis script for deeper personalization.</p>
-                </div>
-              </div>
-            )}
-
-            {step === 1 && (
               <div style={{ animation: "fadeUp 0.6s ease" }}>
                 <div style={{ textAlign: "center", marginBottom: "40px" }}>
-                  <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "32px", fontWeight: 600, marginBottom: "8px" }}>Hi {name} — what is your main challenge?</h2>
+                  <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(28px, 5vw, 36px)", fontWeight: 600, marginBottom: "8px", background: "linear-gradient(135deg, #A8C5AE, #C4A882)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>What is your main challenge?</h2>
                   <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "15px" }}>Select the area you would like to focus on today.</p>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "16px" }}>
@@ -474,7 +473,8 @@ export default function Generator({ onBack }) {
               </div>
             )}
 
-            {step === 2 && mainSymptom && (
+            {/* Step 1: Sub Symptoms */}
+            {step === 1 && mainSymptom && (
               <div style={{ animation: "fadeUp 0.6s ease" }}>
                 <div style={{ textAlign: "center", marginBottom: "40px" }}>
                   <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "32px", fontWeight: 600, marginBottom: "8px" }}>Which of these resonate with you?</h2>
@@ -495,7 +495,7 @@ export default function Generator({ onBack }) {
                           border: sel ? "none" : "2px solid rgba(255,255,255,0.2)",
                           background: sel ? "linear-gradient(135deg, #7C9A82, #C4A882)" : "transparent",
                           display: "flex", alignItems: "center", justifyContent: "center", fontSize: "13px", color: "#fff",
-                        }}>{sel && "✓"}</div>
+                        }}>{sel && "\u2713"}</div>
                         <span style={{ fontSize: "14px", fontWeight: sel ? 600 : 400 }}>{sub}</span>
                       </div>
                     );
@@ -504,7 +504,73 @@ export default function Generator({ onBack }) {
               </div>
             )}
 
+            {/* Step 2: Trigger */}
+            {step === 2 && (
+              <div style={{ animation: "fadeUp 0.6s ease" }}>
+                <div style={{ textAlign: "center", marginBottom: "40px" }}>
+                  <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "32px", fontWeight: 600, marginBottom: "8px" }}>Describe Your Trigger</h2>
+                  <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "15px" }}>What situation triggers this pattern?</p>
+                </div>
+                <div style={{ maxWidth: "500px", margin: "0 auto" }}>
+                  <label style={{ display: "block", color: "rgba(255,255,255,0.4)", fontSize: "13px", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "2px" }}>Describe the situation</label>
+                  <input value={trigger} onChange={e => setTrigger(e.target.value)} placeholder='e.g. "When my boss gives me critical feedback..."'
+                    style={{ ...IS, fontSize: "16px", padding: "16px 20px", borderRadius: "14px" }}
+                    onFocus={e => e.target.style.borderColor = "rgba(124,154,130,0.5)"} onBlur={e => e.target.style.borderColor = "rgba(255,255,255,0.1)"} />
+                  <p style={{ color: "rgba(255,255,255,0.3)", fontSize: "13px", marginTop: "12px" }}>This helps personalize your hypnosis session to address your specific pattern.</p>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Safe Space (Optional) */}
             {step === 3 && (
+              <div style={{ animation: "fadeUp 0.6s ease" }}>
+                <div style={{ textAlign: "center", marginBottom: "40px" }}>
+                  <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "32px", fontWeight: 600, marginBottom: "8px" }}>Create Your Safe Space</h2>
+                  <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "15px" }}>Where does your mind go when it feels safe? <span style={{ opacity: 0.6 }}>(Optional)</span></p>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: "14px", maxWidth: "650px", margin: "0 auto" }}>
+                  {SAFE_PLACE_OPTIONS.map(opt => {
+                    const sel = safePlace === opt.id;
+                    return (
+                      <GlassCard key={opt.id} onClick={() => setSafePlace(safePlace === opt.id ? "" : opt.id)} style={{
+                        textAlign: "center", padding: "24px 16px",
+                        border: sel ? "2px solid #7C9A82" : "1px solid rgba(255,255,255,0.08)",
+                        background: sel ? "rgba(124,154,130,0.15)" : "rgba(255,255,255,0.04)",
+                        transform: sel ? "scale(1.03)" : "scale(1)",
+                      }}>
+                        <div style={{ fontSize: "32px", marginBottom: "10px" }}>{opt.icon}</div>
+                        <div style={{ fontSize: "13px", fontWeight: 600 }}>{opt.label}</div>
+                      </GlassCard>
+                    );
+                  })}
+                </div>
+                <p style={{ color: "rgba(255,255,255,0.25)", fontSize: "12px", textAlign: "center", marginTop: "16px" }}>Skip if unsure — we will use calming defaults.</p>
+              </div>
+            )}
+
+            {/* Step 4: Body Cues (Optional) */}
+            {step === 4 && (
+              <div style={{ animation: "fadeUp 0.6s ease" }}>
+                <div style={{ textAlign: "center", marginBottom: "40px" }}>
+                  <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "32px", fontWeight: 600, marginBottom: "8px" }}>Your Body's Warning Signs</h2>
+                  <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "15px" }}>How does your body signal that this pattern is activating? <span style={{ opacity: 0.6 }}>(Optional)</span></p>
+                </div>
+                <div style={{ maxWidth: "500px", margin: "0 auto" }}>
+                  <label style={{ display: "block", color: "rgba(255,255,255,0.4)", fontSize: "13px", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "2px" }}>First body signal</label>
+                  <input value={bodyCue1} onChange={e => setBodyCue1(e.target.value)} placeholder="e.g. tight chest, racing heart"
+                    style={{ ...IS, fontSize: "15px", padding: "14px 18px", borderRadius: "14px", marginBottom: "16px" }}
+                    onFocus={e => e.target.style.borderColor = "rgba(124,154,130,0.5)"} onBlur={e => e.target.style.borderColor = "rgba(255,255,255,0.1)"} />
+                  <label style={{ display: "block", color: "rgba(255,255,255,0.4)", fontSize: "13px", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "2px" }}>Second body signal</label>
+                  <input value={bodyCue2} onChange={e => setBodyCue2(e.target.value)} placeholder="e.g. jaw clenching, shoulders rising"
+                    style={{ ...IS, fontSize: "15px", padding: "14px 18px", borderRadius: "14px" }}
+                    onFocus={e => e.target.style.borderColor = "rgba(124,154,130,0.5)"} onBlur={e => e.target.style.borderColor = "rgba(255,255,255,0.1)"} />
+                  <p style={{ color: "rgba(255,255,255,0.25)", fontSize: "12px", textAlign: "center", marginTop: "16px" }}>Skip if unsure — we will use common ADHD patterns as defaults.</p>
+                </div>
+              </div>
+            )}
+
+            {/* Step 5: Voice Selection */}
+            {step === 5 && (
               <div style={{ animation: "fadeUp 0.6s ease" }}>
                 <div style={{ textAlign: "center", marginBottom: "40px" }}>
                   <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "32px", fontWeight: 600, marginBottom: "8px" }}>Choose your guide's voice</h2>
@@ -530,7 +596,7 @@ export default function Generator({ onBack }) {
                         border: active ? "2px solid #7C9A82" : "1px solid rgba(255,255,255,0.08)",
                         background: active ? "rgba(124,154,130,0.15)" : "rgba(255,255,255,0.04)",
                       }}>
-                        <div style={{ width: "52px", height: "52px", borderRadius: "50%", margin: "0 auto 12px", background: active ? "linear-gradient(135deg, #7C9A82, #C4A882)" : "rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "22px" }}>{v.gender === "female" ? "♀" : "♂"}</div>
+                        <div style={{ width: "52px", height: "52px", borderRadius: "50%", margin: "0 auto 12px", background: active ? "linear-gradient(135deg, #7C9A82, #C4A882)" : "rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "22px" }}>{v.gender === "female" ? "\u2640" : "\u2642"}</div>
                         <div style={{ fontSize: "15px", fontWeight: 700, marginBottom: "2px" }}>{v.name}</div>
                         <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "12px", marginBottom: "8px" }}>{v.desc}</div>
                         <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: "6px", background: "rgba(124,154,130,0.15)", fontSize: "10px", fontWeight: 700, color: "#A8C5AE", textTransform: "uppercase", letterSpacing: "1px" }}>{v.tag}</span>
@@ -543,44 +609,40 @@ export default function Generator({ onBack }) {
               </div>
             )}
 
-            {step === 4 && (
+            {/* Step 6: Hypnosis Track Preview */}
+            {step === 6 && (
               <div style={{ animation: "fadeUp 0.6s ease" }}>
                 <div style={{ textAlign: "center", marginBottom: "40px" }}>
                   <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "32px", fontWeight: 600, marginBottom: "8px" }}>Your Session Preview</h2>
-                  <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "15px" }}>Generate and listen to a preview of your personalized session.</p>
+                  <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "15px" }}>Listen to a 2-3 minute preview of your personalized hypnosis session.</p>
                 </div>
                 <AudioPlayer audioBlob={audioBlob} name={name} voiceName={voices.find(v => v.id === selectedVoice)?.name} isGenerating={isGenerating} genProgress={genProgress} onGenerate={handleGenerate} />
                 {genError && (
                   <div style={{ marginTop: "16px", padding: "14px 20px", borderRadius: "12px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#fca5a5", fontSize: "13px", display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-                    <span>⚠ {genError}</span>
+                    <span>{genError}</span>
                     {genError.includes("API key") && <button onClick={() => setShowApiPanel(true)} style={{ padding: "4px 12px", borderRadius: "6px", background: "rgba(239,68,68,0.2)", border: "none", color: "#fca5a5", cursor: "pointer", fontSize: "12px", fontWeight: 600 }}>Set Key</button>}
                   </div>
                 )}
                 <GlassCard style={{ marginTop: "20px", padding: "20px" }}>
                   <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "2px", marginBottom: "12px" }}>Session Details</div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", fontSize: "14px" }}>
-                    <div><span style={{ color: "rgba(255,255,255,0.4)" }}>Name: </span>{name}</div>
                     <div><span style={{ color: "rgba(255,255,255,0.4)" }}>Voice: </span>{voices.find(v => v.id === selectedVoice)?.name}</div>
                     <div><span style={{ color: "rgba(255,255,255,0.4)" }}>Focus: </span>{MAIN_SYMPTOMS.find(s => s.id === mainSymptom)?.label}</div>
                     <div><span style={{ color: "rgba(255,255,255,0.4)" }}>Full Length: </span>~20 minutes</div>
+                    {safePlace && <div><span style={{ color: "rgba(255,255,255,0.4)" }}>Safe Space: </span>{SAFE_PLACE_OPTIONS.find(o => o.id === safePlace)?.label}</div>}
                   </div>
                   <div style={{ marginTop: "12px" }}>
                     <span style={{ color: "rgba(255,255,255,0.4)", fontSize: "14px" }}>Addressing: </span>
                     <span style={{ fontSize: "14px" }}>{subSymptoms.join(", ")}</span>
                   </div>
                 </GlassCard>
-                <GlassCard style={{ marginTop: "20px", padding: "20px", background: "rgba(124,154,130,0.08)" }}>
-                  <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "2px", marginBottom: "12px" }}>Script Preview</div>
-                  <div style={{ fontSize: "14px", lineHeight: 1.8, color: "rgba(255,255,255,0.6)", whiteSpace: "pre-wrap", maxHeight: "200px", overflow: "auto" }}>{generateScript(name, mainSymptom, subSymptoms, false)}</div>
-                </GlassCard>
               </div>
             )}
 
             {/* NAV BUTTONS */}
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: "48px", gap: "16px" }}>
-              {step > 0 && <button onClick={() => { setStep(s => s - 1); setAudioBlob(null); }} style={{ padding: "14px 32px", borderRadius: "14px", cursor: "pointer", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#A8C5AE", fontSize: "15px", fontWeight: 600, fontFamily: "'Quicksand', sans-serif" }}>{step === 4 ? "Edit Choices" : "\u2190 Back"}</button>}
-              <div style={{ flex: 1 }} />
-              {step < 4 ? (
+            <div style={{ display: "flex", justifyContent: step > 0 ? "space-between" : "flex-end", marginTop: "48px", gap: "16px" }}>
+              {step > 0 && <button onClick={() => { setStep(s => s - 1); if (step === 6) setAudioBlob(null); }} style={{ padding: "14px 32px", borderRadius: "14px", cursor: "pointer", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#A8C5AE", fontSize: "15px", fontWeight: 600, fontFamily: "'Quicksand', sans-serif" }}>{step === 6 ? "Edit Choices" : "\u2190 Back"}</button>}
+              {step < 6 ? (
                 <button disabled={!canProceed()} onClick={() => setStep(s => s + 1)} style={{
                   padding: "14px 40px", borderRadius: "14px", cursor: canProceed() ? "pointer" : "not-allowed",
                   background: canProceed() ? "linear-gradient(135deg, #7C9A82, #4A6B50)" : "rgba(255,255,255,0.06)",
@@ -652,7 +714,7 @@ export default function Generator({ onBack }) {
               <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.4)", marginTop: "4px" }}>{subSymptoms.length} focus areas • {voices.find(v => v.id === selectedVoice)?.name} • ~20 min</div>
             </GlassCard>
             <div style={{ marginTop: "40px" }}>
-              <button onClick={() => { setStep(0); setShowPayment(false); setPaymentComplete(false); setSubSymptoms([]); setMainSymptom(null); setAudioBlob(null); }} style={{
+              <button onClick={() => { setStep(0); setShowPayment(false); setPaymentComplete(false); setSubSymptoms([]); setMainSymptom(null); setTrigger(""); setSafePlace(""); setBodyCue1(""); setBodyCue2(""); setAudioBlob(null); }} style={{
                 padding: "14px 32px", borderRadius: "14px", cursor: "pointer",
                 background: "linear-gradient(135deg, #7C9A82, #4A6B50)", border: "none",
                 color: "#fff", fontSize: "15px", fontWeight: 700, fontFamily: "'Quicksand', sans-serif",
@@ -725,10 +787,10 @@ export default function Generator({ onBack }) {
         )}
       </div>
 
-      <footer style={{ borderTop: "1px solid rgba(255,255,255,0.05)", padding: "32px", textAlign: "center", color: "rgba(255,255,255,0.25)", fontSize: "12px", position: "relative", zIndex: 1 }}>
-        <div style={{ marginBottom: "8px", fontFamily: "'Playfair Display', serif", fontSize: "16px", color: "rgba(255,255,255,0.35)" }}>Mind Refuge</div>
-        <div>Self-hypnosis wellness tool — not a substitute for professional care.</div>
-        <div style={{ marginTop: "4px" }}>© 2026 Mind Refuge. All rights reserved.</div>
+      <footer style={{ borderTop: "1px solid rgba(255,255,255,0.05)", padding: "32px 24px", textAlign: "center", color: "rgba(255,255,255,0.2)", fontSize: "11px", position: "relative", zIndex: 1, lineHeight: 1.6 }}>
+        <div style={{ marginBottom: "6px", fontFamily: "'Playfair Display', serif", fontSize: "15px", color: "rgba(255,255,255,0.3)" }}>Mind Refuge</div>
+        <div style={{ maxWidth: "500px", margin: "0 auto 6px" }}>Mind Refuge is a wellness tool, not a substitute for professional medical or psychological treatment. If you have ADHD or suspect you do, please consult a licensed healthcare provider.</div>
+        <div>© 2026 Mind Refuge. All rights reserved.</div>
       </footer>
 
       <style>{
