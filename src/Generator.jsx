@@ -61,6 +61,15 @@ const SAFE_PLACE_OPTIONS = [
   { id: "lakeside", label: "Lakeside", icon: "\uD83C\uDFDE\uFE0F" },
 ];
 
+const MUSIC_OPTIONS = [
+  { id: "ambient-pads", label: "Ambient Pads", icon: "\uD83C\uDFB6", isDefault: true },
+  { id: "nature-soundscape", label: "Nature Soundscape", icon: "\uD83C\uDF3F" },
+  { id: "piano-minimal", label: "Piano Minimal", icon: "\uD83C\uDFB9" },
+  { id: "lofi-calm", label: "Lo-fi Calm", icon: "\uD83C\uDFA7" },
+  { id: "binaural-style", label: "Binaural Style", icon: "\uD83E\uDDE0" },
+  { id: "no-music", label: "No Music", icon: "\uD83D\uDD07" },
+];
+
 const PREMIUM_TRACKS = [
   { id: "p1", title: "Soothe Stress & Anxiety", therapist: "Dr. Sarah Mitchell", duration: "22 min", price: 20, color: "#7ecec1", icon: "🍃" },
   { id: "p2", title: "Boost Self-Esteem", therapist: "James Harlow, CHt", duration: "25 min", price: 20, color: "#d4a574", icon: "✨" },
@@ -613,6 +622,7 @@ export default function Generator({ onBack }) {
   const [bodyCue1, setBodyCue1] = useState("");
   const [bodyCue2, setBodyCue2] = useState("");
   const [selectedVoice, setSelectedVoice] = useState(null);
+  const [music, setMusic] = useState("ambient-pads");
   const [showPayment, setShowPayment] = useState(false);
   // Stripe checkout will be integrated later for $8 payment
   const [paymentProcessing, setPaymentProcessing] = useState(false);
@@ -643,6 +653,13 @@ export default function Generator({ onBack }) {
     return () => { cancelled = true; };
   }, [apiKey]);
 
+  // Auto-open API key panel when arriving at voice step without a key
+  useEffect(() => {
+    if (step === 5 && !apiKey) {
+      setShowApiPanel(true);
+    }
+  }, [step, apiKey]);
+
   const toggleSub = (sub) => setSubSymptoms(prev => prev.includes(sub) ? prev.filter(s => s !== sub) : [...prev, sub]);
 
   const handleGenerate = async () => {
@@ -669,7 +686,8 @@ export default function Generator({ onBack }) {
     if (step === 2) return trigger.trim().length > 0;
     if (step === 3) return true; // safe space is optional
     if (step === 4) return true; // body cues are optional
-    if (step === 5) return selectedVoice !== null;
+    if (step === 5) return selectedVoice !== null && !voicesLoading;
+    if (step === 6) return !!music;
     return true;
   };
 
@@ -705,7 +723,7 @@ export default function Generator({ onBack }) {
 {/* ═══ CREATE SESSION ═══ */}
         {activePage === "create" && !showPayment && !paymentComplete && (
           <>
-            <ProgressBar step={step} total={7} />
+            <ProgressBar step={step} total={8} />
 
             {/* Step 0: Main Symptoms */}
             {step === 0 && (
@@ -866,8 +884,35 @@ export default function Generator({ onBack }) {
               </div>
             )}
 
-            {/* Step 6: Hypnosis Track Preview */}
+            {/* Step 6: Music Selection */}
             {step === 6 && (
+              <div style={{ animation: "fadeUp 0.6s ease" }}>
+                <div style={{ textAlign: "center", marginBottom: "40px" }}>
+                  <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "32px", fontWeight: 600, marginBottom: "8px" }}>Background Music</h2>
+                  <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "15px" }}>What should play underneath your session?</p>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "14px", maxWidth: "650px", margin: "0 auto" }}>
+                  {MUSIC_OPTIONS.map(opt => {
+                    const sel = music === opt.id;
+                    return (
+                      <GlassCard key={opt.id} onClick={() => setMusic(opt.id)} style={{
+                        textAlign: "center", padding: "24px 16px",
+                        border: sel ? "2px solid #7C9A82" : "1px solid rgba(255,255,255,0.08)",
+                        background: sel ? "rgba(124,154,130,0.15)" : "rgba(255,255,255,0.04)",
+                        transform: sel ? "scale(1.03)" : "scale(1)",
+                      }}>
+                        <div style={{ fontSize: "32px", marginBottom: "10px" }}>{opt.icon}</div>
+                        <div style={{ fontSize: "13px", fontWeight: 600 }}>{opt.label}</div>
+                        {opt.isDefault && <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.3)", marginTop: "4px", fontStyle: "italic" }}>default</div>}
+                      </GlassCard>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Step 7: Hypnosis Track Preview */}
+            {step === 7 && (
               <div style={{ animation: "fadeUp 0.6s ease" }}>
                 <div style={{ textAlign: "center", marginBottom: "40px" }}>
                   <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "32px", fontWeight: 600, marginBottom: "8px" }}>Your Session Preview</h2>
@@ -881,16 +926,16 @@ export default function Generator({ onBack }) {
                   </div>
                 )}
                 <GlassCard style={{ marginTop: "20px", padding: "20px" }}>
-                  <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "2px", marginBottom: "12px" }}>Session Details</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", fontSize: "14px" }}>
-                    <div><span style={{ color: "rgba(255,255,255,0.4)" }}>Voice: </span>{voices.find(v => v.id === selectedVoice)?.name}</div>
+                  <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "2px", marginBottom: "12px" }}>Session Summary</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", fontSize: "14px" }}>
                     <div><span style={{ color: "rgba(255,255,255,0.4)" }}>Focus: </span>{MAIN_SYMPTOMS.find(s => s.id === mainSymptom)?.label}</div>
+                    <div><span style={{ color: "rgba(255,255,255,0.4)" }}>Voice: </span>{voices.find(v => v.id === selectedVoice)?.name}</div>
+                    <div><span style={{ color: "rgba(255,255,255,0.4)" }}>Music: </span>{MUSIC_OPTIONS.find(o => o.id === music)?.label}</div>
+                    <div><span style={{ color: "rgba(255,255,255,0.4)" }}>Safe Space: </span>{safePlace ? SAFE_PLACE_OPTIONS.find(o => o.id === safePlace)?.label : "Default"}</div>
+                    <div style={{ gridColumn: "1 / -1" }}><span style={{ color: "rgba(255,255,255,0.4)" }}>Trigger: </span>{trigger}</div>
+                    <div style={{ gridColumn: "1 / -1" }}><span style={{ color: "rgba(255,255,255,0.4)" }}>Body Cues: </span>{bodyCue1 || bodyCue2 ? [bodyCue1, bodyCue2].filter(Boolean).join(", ") : "Default (common ADHD patterns)"}</div>
+                    <div style={{ gridColumn: "1 / -1" }}><span style={{ color: "rgba(255,255,255,0.4)" }}>Addressing: </span>{subSymptoms.join(", ")}</div>
                     <div><span style={{ color: "rgba(255,255,255,0.4)" }}>Full Length: </span>~20 minutes</div>
-                    {safePlace && <div><span style={{ color: "rgba(255,255,255,0.4)" }}>Safe Space: </span>{SAFE_PLACE_OPTIONS.find(o => o.id === safePlace)?.label}</div>}
-                  </div>
-                  <div style={{ marginTop: "12px" }}>
-                    <span style={{ color: "rgba(255,255,255,0.4)", fontSize: "14px" }}>Addressing: </span>
-                    <span style={{ fontSize: "14px" }}>{subSymptoms.join(", ")}</span>
                   </div>
                 </GlassCard>
               </div>
@@ -898,8 +943,8 @@ export default function Generator({ onBack }) {
 
             {/* NAV BUTTONS */}
             <div style={{ display: "flex", justifyContent: step > 0 ? "space-between" : "flex-end", marginTop: "48px", gap: "16px" }}>
-              {step > 0 && <button onClick={() => { setStep(s => s - 1); if (step === 6) setAudioBlob(null); }} style={{ padding: "14px 32px", borderRadius: "14px", cursor: "pointer", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#A8C5AE", fontSize: "15px", fontWeight: 600, fontFamily: "'Quicksand', sans-serif" }}>{step === 6 ? "Edit Choices" : "\u2190 Back"}</button>}
-              {step < 6 ? (
+              {step > 0 && <button onClick={() => { setStep(s => s - 1); if (step === 7) setAudioBlob(null); }} style={{ padding: "14px 32px", borderRadius: "14px", cursor: "pointer", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#A8C5AE", fontSize: "15px", fontWeight: 600, fontFamily: "'Quicksand', sans-serif" }}>{step === 7 ? "Edit Choices" : "\u2190 Back"}</button>}
+              {step < 7 ? (
                 <button disabled={!canProceed()} onClick={() => setStep(s => s + 1)} style={{
                   padding: "14px 40px", borderRadius: "14px", cursor: canProceed() ? "pointer" : "not-allowed",
                   background: canProceed() ? "linear-gradient(135deg, #7C9A82, #4A6B50)" : "rgba(255,255,255,0.06)",
@@ -971,7 +1016,7 @@ export default function Generator({ onBack }) {
               <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.4)", marginTop: "4px" }}>{subSymptoms.length} focus areas • {voices.find(v => v.id === selectedVoice)?.name} • ~20 min</div>
             </GlassCard>
             <div style={{ marginTop: "40px" }}>
-              <button onClick={() => { setStep(0); setShowPayment(false); setPaymentComplete(false); setSubSymptoms([]); setMainSymptom(null); setTrigger(""); setSafePlace(""); setBodyCue1(""); setBodyCue2(""); setAudioBlob(null); }} style={{
+              <button onClick={() => { setStep(0); setShowPayment(false); setPaymentComplete(false); setSubSymptoms([]); setMainSymptom(null); setTrigger(""); setSafePlace(""); setBodyCue1(""); setBodyCue2(""); setMusic("ambient-pads"); setAudioBlob(null); }} style={{
                 padding: "14px 32px", borderRadius: "14px", cursor: "pointer",
                 background: "linear-gradient(135deg, #7C9A82, #4A6B50)", border: "none",
                 color: "#fff", fontSize: "15px", fontWeight: 700, fontFamily: "'Quicksand', sans-serif",
