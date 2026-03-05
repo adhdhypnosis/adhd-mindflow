@@ -70,17 +70,274 @@ const PREMIUM_TRACKS = [
   { id: "p6", title: "Overcome Procrastination", therapist: "Lena Vasquez, CHt", duration: "18 min", price: 20, color: "#f59e0b", icon: "🚀" },
 ];
 
-function generateScript(name, mainSymptom, subSymptoms, full) {
-  const symptomLabel = MAIN_SYMPTOMS.find(s => s.id === mainSymptom)?.label || "";
-  const subList = subSymptoms.join(", ").toLowerCase();
-  const fn = name || "friend";
-  const intro = "Welcome, " + fn + ". This is your personal self-hypnosis session, designed specifically for you. Find a comfortable position, and when you are ready, gently close your eyes.\n\nTake a deep, slow breath in through your nose. Hold it for a moment. And release it slowly through your mouth. Good. Again, breathe in calm, breathe out tension. One more time, breathe in peace, breathe out everything that no longer serves you.\n\nWith each breath, you feel your body becoming heavier, more relaxed. Your shoulders drop. Your jaw unclenches. The space between your thoughts grows wider and quieter.";
-  const induction = "\n\nNow, " + fn + ", imagine yourself standing at the top of a beautiful staircase. There are ten steps leading down to a place of deep inner peace. With each step, you go deeper into relaxation.\n\nTen, feeling calm and safe. Nine, your body grows heavier. Eight, thoughts drifting away like clouds. Seven, deeper still. Six, a warm wave of comfort washes over you. Five, halfway down, so deeply relaxed. Four, peaceful and still. Three, almost there. Two, so deep, so calm. One, you have arrived at your place of perfect peace.";
-  const symptomWork = "\n\nYou are here to work with your experience of " + symptomLabel.toLowerCase() + ", " + fn + ". Specifically, the way " + subList + " have been showing up in your life. And that is okay. You are not broken. Your mind simply works differently, and today, you are giving it exactly what it needs.\n\nImagine each of these challenges as a knot in a golden thread. One by one, you reach out and gently untie them. Each knot releases easily, smoothly. Where there was tension, there is now flow. Where there was struggle, there is now ease.\n\n" + fn + ", repeat silently after me: I am capable. I am enough. My mind is my greatest ally. I release what I cannot control, and I embrace my unique way of experiencing the world.";
-  const deepening = "\n\nGoing deeper now. Feel a warm golden light beginning at the crown of your head, slowly flowing down through your body. It fills every cell with calm confidence. This light knows exactly where to go. It finds the places that have been holding tension around " + subList + ", and it dissolves that tension completely.\n\nYou are rewiring. You are healing. Not by force, but by gentle permission. Your subconscious mind is listening, absorbing every positive suggestion, making it a permanent part of who you are.\n\n" + fn + ", you are becoming the version of yourself who handles " + symptomLabel.toLowerCase() + " with grace and self-compassion. This version of you already exists. You are simply stepping into them now.";
-  const emergence = "\n\nIn a moment, I will count from one to five, and with each number, you will return to full waking awareness, feeling refreshed, empowered, and deeply at peace.\n\nOne, beginning to return, feeling the suggestions taking root. Two, awareness growing, body feeling light and energized. Three, almost there, a smile forming on your lips. Four, eyes ready to open, feeling wonderful. Five, eyes open, fully awake, fully present, carrying this peace with you throughout your day.\n\nWell done, " + fn + ". This session is yours to return to whenever you need it.";
-  if (full) return intro + induction + symptomWork + deepening + emergence;
-  return intro;
+function resolveBodyCues(bodyCue1, bodyCue2) {
+  const c1 = bodyCue1?.trim();
+  const c2 = bodyCue2?.trim();
+  if (c1 && c2) return c1 + " or " + c2;
+  if (c1) return c1 + ", jaw clenching, or shoulders rising";
+  if (c2) return c2 + ", tight chest, or thoughts speeding up";
+  return "tight chest, jaw clenching, shoulders rising, or thoughts speeding up";
+}
+
+function resolveSafePlace(safePlace) {
+  if (!safePlace) return "a quiet, comfortable place";
+  return SAFE_PLACE_OPTIONS.find(o => o.id === safePlace)?.label.toLowerCase() || "a quiet, comfortable place";
+}
+
+const P6 = '<break time="3.0s" /><break time="3.0s" />';
+const P10 = '<break time="3.0s" /><break time="3.0s" /><break time="3.0s" />';
+const P12 = '<break time="3.0s" /><break time="3.0s" /><break time="3.0s" /><break time="3.0s" />';
+const P14 = '<break time="3.0s" /><break time="3.0s" /><break time="3.0s" /><break time="3.0s" /><break time="2.0s" />';
+const P16 = '<break time="3.0s" /><break time="3.0s" /><break time="3.0s" /><break time="3.0s" /><break time="3.0s" />';
+const P18 = '<break time="3.0s" /><break time="3.0s" /><break time="3.0s" /><break time="3.0s" /><break time="3.0s" /><break time="3.0s" />';
+const P20 = P18 + '<break time="2.0s" />';
+const P22 = P18 + '<break time="3.0s" />';
+const P24 = P18 + '<break time="3.0s" /><break time="3.0s" />';
+const P40 = P24 + P16;
+
+function generateFullScript({ mainSymptom, subSymptoms, trigger, safePlace, bodyCue1, bodyCue2 }) {
+  const symptomLabel = MAIN_SYMPTOMS.find(s => s.id === mainSymptom)?.label || "emotional dysregulation";
+  const safePlaceLabel = resolveSafePlace(safePlace);
+  const bodyCues = resolveBodyCues(bodyCue1, bodyCue2);
+  const s1 = bodyCue1?.trim() || "";
+  const s2 = bodyCue2?.trim() || "";
+
+  const sensory1 = "wind moving through leaves, distant waves, or soft birdsong";
+  const sensory2 = "a comfortable temperature, a gentle breeze, or the feeling of soft fabric supporting you";
+  const sensory3 = "clean air, a subtle scent of pine or ocean, or warm light in the scene";
+
+  return `Welcome to this audio from Mind Refuge.
+
+Before we begin, a quick note. This audio is for education and relaxation. It is not medical or psychological treatment. If you have a medical condition, a mental health condition, or if you are unsure whether hypnosis is appropriate for you, check with a qualified healthcare professional before using this audio.
+
+${P6}
+
+Now, get comfortable, in a way that lets your body rest for the next little while. If your eyes want to close, let them close.
+
+This session is designed for an ADHD nervous system. So your attention does not need to behave perfectly. Your mind may wander. That is normal. Each time you notice, you gently return to the sound of my voice.
+
+And today, we are focusing on: ${symptomLabel}. So everything we do here guides you toward a calmer, steadier response in that area.
+
+${P10}
+
+Take a moment to notice how you are arriving right now. Not in your head. In your body.
+
+Notice your jaw. Your shoulders. Your belly. Your hands.
+
+If you notice any tightness, you do not need to fight it. Just notice it.
+
+${P10}
+
+Now we use a simple breath pattern to tell your nervous system: safe enough, right now.
+
+Inhale slowly through the nose for about 4 seconds. Exhale gently for about 8 seconds. Longer out than in. As long as it feels comfortable. If 8 seconds is too long today, shorten it a little. Comfort first.
+
+${P6}
+
+Let us do a few together.
+
+Inhale, 2, 3, 4. <break time="1.0s" /> Exhale, 2, 3, 4, 5, 6, 7, 8.
+
+${P10}
+
+Again. Inhale, 2, 3, 4. <break time="1.0s" /> Exhale, 2, 3, 4, 5, 6, 7, 8.
+
+${P12}
+
+Now, if you like, add a soft hum during the exhale. A gentle vibration. Not loud. Not forced. Just enough to feel it in the chest or throat.
+
+Inhale 4. Exhale 8, with a quiet hum.
+
+${P14}
+
+One more breath, at your own pace. Inhale. Slow exhale. Optional hum.
+
+${P18}
+
+Good. From here, you do not need to count. Just keep a slightly longer exhale in the background.
+
+${P10}
+
+Now, a gentle experiment.
+
+Imagine what it would feel like to be twice as relaxed as you are right now. No effort required. Just imagine the sensation.
+
+${P12}
+
+And now imagine what it would feel like to be twice as relaxed as that. Again, no forcing. Just curiosity.
+
+${P14}
+
+Bring your awareness to the muscles around your eyes. Let them loosen. Let the eyelids rest.
+
+<break time="3.0s" /><break time="3.0s" /><break time="2.0s" />
+
+Let that softness spread across the forehead. Down into the cheeks. The tongue resting. The jaw unclenching.
+
+${P10}
+
+Let the neck lengthen. Let the shoulders drop. Let the arms become pleasantly heavy. Hands loosening.
+
+${P12}
+
+Let the chest soften. Let the belly be allowed to move with the breath. Let the hips settle. Let the legs rest.
+
+${P16}
+
+If your mind wanders, that is fine. When you notice, come back to one simple thing: the long exhale.
+
+${P12}
+
+Now imagine a place that feels calming and safe. A place just for you. Real or imaginary.
+
+It might be ${safePlaceLabel}. Or your mind can simply create a sense of safe enough without an image.
+
+${P10}
+
+Now add a few gentle details.
+
+For sound, notice: ${sensory1}.
+
+${P12}
+
+For temperature or texture, notice: ${sensory2}.
+
+${P12}
+
+For smell or visual detail, notice: ${sensory3}.
+
+${P16}
+
+Here, there are no demands. Nothing to solve right now. Just a reset.
+
+${P14}
+
+Whether your conscious mind listens closely or wanders, your deeper mind can still follow along. You can relax the mind the same way you relax a muscle. Not by pushing. By letting go.
+
+In a moment, you will count down silently in your mind from 100. Slowly. With space between the numbers. And if you lose your place or forget to count, that is perfectly fine. Often, that simply means you are drifting deeper.
+
+Begin now. 100... 99... 98... slower than usual... more space... less effort...
+
+${P40}
+
+And as the counting fades, let it fade. Let the mind drift. Let it float.
+
+${P22}
+
+Now I will count from 5 down to 1. And with each number, you can imagine descending into a quieter place inside. Like a gentle escalator going down.
+
+5... deeper. ${P6} 4... softer. ${P6} 3... slower. ${P6} 2... quieter. ${P6} 1... settled.
+
+${P16}
+
+Now bring to mind the situation that usually sets things off for you. ${trigger}.
+
+You do not need to replay the whole story. Just let it be a small idea in the background, like a headline.
+
+${P12}
+
+Notice what your system usually tries to do when this shows up. Maybe it speeds you up. Maybe it tightens you. Maybe it pulls you into overthinking. Maybe it urges you to brace, fix, explain, or escape.
+
+${P10}
+
+Here is the rewire.
+
+When this trigger shows up, you recognize: This is activation. Not danger.
+
+${P12}
+
+And because it is not danger, you do not need emergency mode. You stay here. You stay grounded. You stay in your body.
+
+${P12}
+
+So in that moment, you do one simple thing. One long exhale. Inhale gently. Exhale longer. Optional hum.
+
+${P16}
+
+And as you exhale, you feel gravity again. You feel support again. You let the floor, the chair, the bed, hold you.
+
+${P16}
+
+Now you choose steadiness. Not perfection. Steadiness.
+
+Steadiness means you respond from the present moment, not from alarm. Steadiness means you can take one step at a time. Steadiness means you do not abandon yourself.
+
+${P18}
+
+Now rehearse it as a simple loop.
+
+The trigger shows up. You recognize activation, not danger. You take the long exhale. You stay grounded. You respond with steadiness.
+
+${P22}
+
+Again, even easier.
+
+Trigger. Not danger. Long exhale. Grounded. Steady.
+
+${P22}
+
+And again, as if this is becoming familiar.
+
+Trigger. Not danger. Long exhale. Grounded. Steady.
+
+${P24}
+
+Now add an early reminder from your body.
+
+When you notice ${bodyCues}, that is your cue to do the long exhale early. Not to fight the feeling. To guide it.
+
+${P18}
+
+Now let the trigger fade into the background. Return to your safe place. Return to the simple sense of safe enough.
+
+${P18}
+
+Your nervous system can learn this. Not by willpower. By repetition.
+
+And over time, when ${trigger} happens, you may notice you recover faster. You may notice less escalation. You may notice more steadiness and more choice in how you respond. Not all at once. But real. And growing.
+
+${P18}
+
+Stress and anxiety are often the body preparing for something. And sometimes it prepares when it does not need to. From now on, you get better at sending the message: Thank you, body. I have this.
+
+And the body learns to trust you.
+
+${P20}
+
+From this point forward, your cue is simple. When you notice activation, you do one long exhale. Optional hum. And you remain grounded.
+
+That single move becomes the doorway back to steadiness.
+
+${P18}
+
+In a moment I will count from 1 up to 5. And as I do, you will return to normal awake awareness, feeling clear, present, and steady.
+
+1, becoming aware of the room again. <break time="3.0s" /><break time="2.0s" /> 2, feeling your body more, hands, feet, posture. <break time="3.0s" /><break time="2.0s" /> 3, taking a deeper breath, gently energizing. <break time="3.0s" /><break time="2.0s" /> 4, maybe stretching or rolling the shoulders, bringing movement back. <break time="3.0s" /><break time="2.0s" /> 5, and when you are ready, opening your eyes, feeling present, grounded, and calm.
+
+${P6}
+
+End of session.`;
+}
+
+function generatePreviewScript({ trigger, bodyCue1, bodyCue2 }) {
+  const bodyCues = resolveBodyCues(bodyCue1, bodyCue2);
+  return `Now bring to mind the situation that usually sets things off for you. ${trigger}.
+
+You do not need to replay the whole story. Just let it be a small idea in the background, like a headline.
+
+<break time="3.0s" />
+
+Here is the rewire.
+
+When this trigger shows up, you recognize: This is activation. Not danger.
+
+<break time="3.0s" />
+
+And because it is not danger, you do not need emergency mode. You stay here. You stay grounded. You stay in your body.
+
+<break time="3.0s" />
+
+When you notice ${bodyCues}, that is your cue to do the long exhale early. Not to fight the feeling. To guide it.`;
 }
 
 async function generateSpeech(text, voiceId, apiKey, onProgress) {
@@ -91,7 +348,7 @@ async function generateSpeech(text, voiceId, apiKey, onProgress) {
     body: JSON.stringify({
       text: text,
       model_id: "eleven_multilingual_v2",
-      voice_settings: { stability: 0.75, similarity_boost: 0.75 },
+      voice_settings: { stability: 0.75, similarity_boost: 0.75, speed: 0.8 },
     }),
   });
   if (!response.ok) {
@@ -240,7 +497,7 @@ function AudioPlayer({ audioBlob, name, voiceName, isGenerating, genProgress, on
           <div>
             <div style={{ fontSize: "48px", marginBottom: "16px", opacity: 0.7 }}>🎧</div>
             <div style={{ color: "#E0EDE2", fontSize: "18px", fontFamily: "'Playfair Display', serif", marginBottom: "8px" }}>Ready to generate your preview</div>
-            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "13px", marginBottom: "24px" }}>We will create a ~2 min audio preview using ElevenLabs AI</div>
+            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "13px", marginBottom: "24px" }}>We will create a ~30 second preview from your therapeutic core using ElevenLabs AI</div>
             <button onClick={onGenerate} style={{
               padding: "14px 40px", borderRadius: "14px", cursor: "pointer",
               background: "linear-gradient(135deg, #7C9A82, #C4A882)", border: "none",
@@ -392,10 +649,10 @@ export default function Generator({ onBack }) {
     if (!apiKey) { setShowApiPanel(true); return; }
     const voice = voices.find(v => v.id === selectedVoice);
     if (!voice) { setGenError("No voice selected. Go back and select a voice."); return; }
-    const previewScript = generateScript(name, mainSymptom, subSymptoms, false);
+    const previewText = generatePreviewScript({ trigger, bodyCue1, bodyCue2 });
     setIsGenerating(true); setGenError(null); setAudioBlob(null);
     try {
-      const blob = await generateSpeech(previewScript, voice.elevenId, apiKey, setGenProgress);
+      const blob = await generateSpeech(previewText, voice.elevenId, apiKey, setGenProgress);
       setAudioBlob(blob);
     } catch (err) { setGenError(err.message); }
     setIsGenerating(false);
@@ -614,7 +871,7 @@ export default function Generator({ onBack }) {
               <div style={{ animation: "fadeUp 0.6s ease" }}>
                 <div style={{ textAlign: "center", marginBottom: "40px" }}>
                   <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "32px", fontWeight: 600, marginBottom: "8px" }}>Your Session Preview</h2>
-                  <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "15px" }}>Listen to a 2-3 minute preview of your personalized hypnosis session.</p>
+                  <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "15px" }}>Listen to a 30-second preview from the therapeutic core of your session.</p>
                 </div>
                 <AudioPlayer audioBlob={audioBlob} name={name} voiceName={voices.find(v => v.id === selectedVoice)?.name} isGenerating={isGenerating} genProgress={genProgress} onGenerate={handleGenerate} />
                 {genError && (
