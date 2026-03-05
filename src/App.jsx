@@ -1,34 +1,22 @@
-import { useState, useEffect } from "react";
+import { Routes, Route, useParams } from "react-router-dom";
 import Landing from "./Landing.jsx";
-import Generator from "./Generator.jsx";
+import HypnosisGeneratorForm from "./pages/HypnosisGeneratorForm.jsx";
+import SymptomLanding from "./components/SymptomLanding.jsx";
+import { LANDING_PAGES } from "./data/landingPages.js";
+
+function SymptomPage() {
+  const { slug } = useParams();
+  const data = LANDING_PAGES[slug];
+  if (!data) return <Landing />;
+  return <SymptomLanding data={data} />;
+}
 
 export default function App() {
-  const [page, setPage] = useState("landing");
-
-  useEffect(() => {
-    const handleHash = () => {
-      const hash = window.location.hash;
-      if (hash === "#/hypnosis-generator" || hash === "#/generator") {
-        setPage("generator");
-      } else {
-        setPage("landing");
-      }
-    };
-    handleHash();
-    window.addEventListener("hashchange", handleHash);
-    return () => window.removeEventListener("hashchange", handleHash);
-  }, []);
-
-  const navigateTo = (target) => {
-    if (target === "generator") {
-      window.location.hash = "#/hypnosis-generator";
-    } else {
-      window.location.hash = "#/";
-    }
-  };
-
-  if (page === "generator") {
-    return <Generator onBack={() => navigateTo("landing")} />;
-  }
-  return <Landing onOpenGenerator={() => navigateTo("generator")} />;
+  return (
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/hypnosis-generator" element={<HypnosisGeneratorForm />} />
+      <Route path="/:slug" element={<SymptomPage />} />
+    </Routes>
+  );
 }
