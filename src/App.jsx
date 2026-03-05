@@ -1,34 +1,38 @@
-import { useState, useEffect } from "react";
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import Landing from "./Landing.jsx";
 import Generator from "./Generator.jsx";
+import SymptomLandingPage from "./pages/SymptomLandingPage.jsx";
+import { symptomPages } from "./pages/symptomData.jsx";
+
+function LandingWrapper() {
+  const navigate = useNavigate();
+  return <Landing onOpenGenerator={() => navigate("/hypnosis-generator")} />;
+}
+
+function GeneratorWrapper() {
+  const navigate = useNavigate();
+  return <Generator onBack={() => navigate("/")} />;
+}
+
+function SymptomPage({ slug }) {
+  return <SymptomLandingPage data={symptomPages[slug]} />;
+}
 
 export default function App() {
-  const [page, setPage] = useState("landing");
-
-  useEffect(() => {
-    const handleHash = () => {
-      const hash = window.location.hash;
-      if (hash === "#/hypnosis-generator" || hash === "#/generator") {
-        setPage("generator");
-      } else {
-        setPage("landing");
-      }
-    };
-    handleHash();
-    window.addEventListener("hashchange", handleHash);
-    return () => window.removeEventListener("hashchange", handleHash);
-  }, []);
-
-  const navigateTo = (target) => {
-    if (target === "generator") {
-      window.location.hash = "#/hypnosis-generator";
-    } else {
-      window.location.hash = "#/";
-    }
-  };
-
-  if (page === "generator") {
-    return <Generator onBack={() => navigateTo("landing")} />;
-  }
-  return <Landing onOpenGenerator={() => navigateTo("generator")} />;
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<LandingWrapper />} />
+        <Route path="/hypnosis-generator" element={<GeneratorWrapper />} />
+        <Route path="/generator" element={<GeneratorWrapper />} />
+        {Object.keys(symptomPages).map((slug) => (
+          <Route
+            key={slug}
+            path={`/${slug}`}
+            element={<SymptomPage slug={slug} />}
+          />
+        ))}
+      </Routes>
+    </BrowserRouter>
+  );
 }
