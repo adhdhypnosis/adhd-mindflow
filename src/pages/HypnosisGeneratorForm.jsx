@@ -1,5 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
+import { hypnosisScript, prepareScript } from "../data/hypnosisScript.js";
+import GeneratingView from "../components/hypnosis/GeneratingView.jsx";
+import PlayerView from "../components/hypnosis/PlayerView.jsx";
 
 const SAGE = "#7C9A82";
 const SAGE_LIGHT = "#A8C5AE";
@@ -14,15 +17,15 @@ const BG = "#FAFBF9";
 const WHITE = "#FFFFFF";
 
 const FOCUS_OPTIONS = [
-  { id: "emotional-overwhelm", label: "Emotional Overwhelm", icon: "\uD83C\uDF0A" },
+  { id: "emotional overwhelm", label: "Emotional Overwhelm", icon: "\uD83C\uDF0A" },
   { id: "rumination", label: "Rumination", icon: "\uD83D\uDD04" },
-  { id: "task-paralysis", label: "Task Paralysis", icon: "\u26A0\uFE0F" },
-  { id: "rejection-sensitivity", label: "Rejection Sensitivity", icon: "\uD83D\uDC94" },
-  { id: "sensory-overload", label: "Sensory Overload", icon: "\uD83D\uDD0A" },
-  { id: "sleep-anxiety", label: "Sleep Anxiety", icon: "\uD83C\uDF19" },
-  { id: "social-anxiety", label: "Social Anxiety", icon: "\uD83D\uDE36" },
-  { id: "performance-anxiety", label: "Performance Anxiety", icon: "\uD83C\uDFAF" },
-  { id: "time-pressure", label: "Time Pressure Stress", icon: "\u23F3" },
+  { id: "task paralysis", label: "Task Paralysis", icon: "\u26A0\uFE0F" },
+  { id: "rejection sensitivity", label: "Rejection Sensitivity", icon: "\uD83D\uDC94" },
+  { id: "sensory overload", label: "Sensory Overload", icon: "\uD83D\uDD0A" },
+  { id: "sleep anxiety", label: "Sleep Anxiety", icon: "\uD83C\uDF19" },
+  { id: "social anxiety", label: "Social Anxiety", icon: "\uD83D\uDE36" },
+  { id: "performance anxiety", label: "Performance Anxiety", icon: "\uD83C\uDFAF" },
+  { id: "time pressure stress", label: "Time Pressure Stress", icon: "\u23F3" },
 ];
 
 const SAFE_PLACE_OPTIONS = [
@@ -45,90 +48,11 @@ const MUSIC_OPTIONS = [
   { id: "no-music", label: "No Music", icon: "\uD83D\uDD07" },
 ];
 
-const DEFAULTS = {
-  sensory1: "wind moving through leaves, distant waves, or soft birdsong",
-  sensory2: "a comfortable temperature, a gentle breeze, or the feeling of soft fabric supporting you",
-  sensory3: "clean air, a subtle scent of pine or ocean, or warm light in the scene",
-  safePlace: "a quiet, comfortable place",
-  bodyCues: "tight chest, jaw clenching, shoulders rising, or thoughts speeding up",
-};
-
-function buildSSML(data) {
-  const focus = FOCUS_OPTIONS.find(o => o.id === data.focus)?.label || data.focus;
-  const trigger = data.trigger;
-  const safePlace = data.safePlace
-    ? SAFE_PLACE_OPTIONS.find(o => o.id === data.safePlace)?.label.toLowerCase() || DEFAULTS.safePlace
-    : DEFAULTS.safePlace;
-  const music = MUSIC_OPTIONS.find(o => o.id === data.music)?.label || "Ambient Pads";
-
-  let bodyCues;
-  if (data.bodyCue1 && data.bodyCue2) {
-    bodyCues = `${data.bodyCue1} and ${data.bodyCue2}`;
-  } else if (data.bodyCue1) {
-    bodyCues = `${data.bodyCue1}, along with other signals like jaw clenching or shoulders rising`;
-  } else if (data.bodyCue2) {
-    bodyCues = `${data.bodyCue2}, along with other signals like tight chest or thoughts speeding up`;
-  } else {
-    bodyCues = DEFAULTS.bodyCues;
-  }
-
-  const sensory1 = data.sensory1 || DEFAULTS.sensory1;
-  const sensory2 = data.sensory2 || DEFAULTS.sensory2;
-  const sensory3 = data.sensory3 || DEFAULTS.sensory3;
-
-  return `<speak>
-  <prosody rate="slow" pitch="-2st">
-
-    <!-- INDUCTION (3 min) -->
-    <p>Close your eyes. <break time="1500ms"/> Let your body settle into wherever you are right now. <break time="1000ms"/> You don't need to try to relax. <break time="800ms"/> Just notice your breath. <break time="1500ms"/> In <break time="500ms"/> and out. <break time="1500ms"/> That's all you need to do right now.</p>
-    <break time="2000ms"/>
-
-    <p>With each exhale, let your body grow a little heavier. <break time="1200ms"/> Your shoulders dropping. <break time="800ms"/> Your jaw softening. <break time="1200ms"/> And if your mind wanders — that's fine. <break time="800ms"/> It always comes back.</p>
-    <break time="2000ms"/>
-
-    <!-- DEEPENER (2 min) -->
-    <p>Now imagine a gentle staircase leading down. <break time="1000ms"/> Ten steps. <break time="800ms"/> With each step, you go deeper into comfort. <break time="1500ms"/></p>
-    <p>Ten. <break time="1200ms"/> Nine. <break time="1200ms"/> Eight. <break time="1200ms"/> Deeper and more comfortable. <break time="1500ms"/> Seven. <break time="1200ms"/> Six. <break time="1200ms"/> Five. <break time="1500ms"/> Halfway down now. <break time="1200ms"/> Four. <break time="1200ms"/> Three. <break time="1200ms"/> Two. <break time="1500ms"/> One. <break time="2000ms"/> Good.</p>
-    <break time="2000ms"/>
-
-    <!-- SAFE PLACE (3 min) -->
-    <p>Now let yourself arrive in ${safePlace}. <break time="1500ms"/> Take a moment to look around. <break time="1200ms"/> Notice ${sensory1}. <break time="1500ms"/> Feel ${sensory2}. <break time="1500ms"/> And breathe in ${sensory3}. <break time="2000ms"/> This is your safe place. <break time="1000ms"/> Nothing can reach you here unless you allow it.</p>
-    <break time="2000ms"/>
-
-    <!-- THERAPEUTIC CORE: ${focus} (12 min) -->
-    <p>Now, from this safe place, I want you to think about your experience with ${focus.toLowerCase()}. <break time="1500ms"/> Specifically, the pattern that shows up when ${trigger}. <break time="2000ms"/></p>
-
-    <p>Notice how your body responds. <break time="1200ms"/> Perhaps you feel ${bodyCues}. <break time="1500ms"/> These are your body's warning signs. <break time="1000ms"/> And right now, in this deep state of relaxation, <break time="800ms"/> you can observe them without being controlled by them.</p>
-    <break time="2000ms"/>
-
-    <p>Your subconscious mind is listening now. <break time="1200ms"/> And I want it to know something important: <break time="1500ms"/> this pattern was never your fault. <break time="1200ms"/> Your brain developed this response to protect you. <break time="1500ms"/> But you don't need this particular protection anymore.</p>
-    <break time="2500ms"/>
-
-    <p>From now on, when you notice ${bodyCues}, <break time="1200ms"/> your subconscious will create a small pause. <break time="1500ms"/> Just enough space to choose. <break time="1200ms"/> Not to suppress. <break time="800ms"/> Not to fight. <break time="800ms"/> Just to notice <break time="500ms"/> and choose.</p>
-    <break time="2000ms"/>
-
-    <p>Each time you listen to this session, <break time="1200ms"/> that pause grows a little wider. <break time="1500ms"/> The pattern loses a little more of its grip. <break time="1500ms"/> And you gain a little more freedom.</p>
-    <break time="3000ms"/>
-
-    <!-- REFRAME (3 min) -->
-    <p>Return now to ${safePlace}. <break time="1500ms"/> Feel the safety of this space. <break time="1200ms"/> And know that this calm, <break time="800ms"/> this clarity, <break time="800ms"/> this sense of being okay — <break time="1200ms"/> it's not something outside of you. <break time="1500ms"/> It lives in you. <break time="1200ms"/> You're simply learning to access it.</p>
-    <break time="2500ms"/>
-
-    <!-- EMERGENCE (2 min) -->
-    <p>In a moment, I'm going to count from one to five. <break time="1000ms"/> With each number, you'll gradually return to full awareness. <break time="1500ms"/> Feeling refreshed. <break time="800ms"/> Feeling calm. <break time="800ms"/> Feeling like something has shifted — even if you can't name it yet.</p>
-    <break time="1500ms"/>
-
-    <p>One. <break time="1200ms"/> Beginning to return. <break time="1200ms"/> Two. <break time="1200ms"/> Becoming more aware of your body. <break time="1200ms"/> Three. <break time="1200ms"/> Energy returning to your fingers and toes. <break time="1200ms"/> Four. <break time="1200ms"/> Almost fully alert now. <break time="1500ms"/> And five. <break time="1500ms"/> Eyes open. <break time="1000ms"/> Welcome back.</p>
-
-  </prosody>
-</speak>`;
-}
-
-function TileSelector({ options, value, onChange, multi }) {
+function TileSelector({ options, value, onChange }) {
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center" }}>
       {options.map(opt => {
-        const selected = multi ? value?.includes(opt.id) : value === opt.id;
+        const selected = value === opt.id;
         return (
           <button
             key={opt.id}
@@ -194,6 +118,7 @@ function TextInput({ label, placeholder, value, onChange, required }) {
           background: WHITE,
           outline: "none",
           transition: "border-color 0.2s ease",
+          boxSizing: "border-box",
         }}
         onFocus={e => e.target.style.borderColor = SAGE}
         onBlur={e => e.target.style.borderColor = "#E8ECEA"}
@@ -216,6 +141,84 @@ function ProgressBar({ step, total }) {
   );
 }
 
+// Create silence as a WAV-compatible AudioBuffer
+function createSilenceBuffer(audioCtx, durationSeconds) {
+  const sampleRate = audioCtx.sampleRate;
+  const numSamples = Math.floor(sampleRate * durationSeconds);
+  return audioCtx.createBuffer(1, numSamples, sampleRate);
+}
+
+// Mix voice track on top of background track at specified volume levels
+function mixAudioBuffers(audioCtx, voiceBuffer, bgBuffer, bgVolume) {
+  const length = Math.max(voiceBuffer.length, bgBuffer ? bgBuffer.length : 0);
+  const numChannels = Math.max(voiceBuffer.numberOfChannels, bgBuffer ? bgBuffer.numberOfChannels : 1);
+  const mixed = audioCtx.createBuffer(numChannels, length, audioCtx.sampleRate);
+
+  for (let ch = 0; ch < numChannels; ch++) {
+    const output = mixed.getChannelData(ch);
+    const voiceCh = ch < voiceBuffer.numberOfChannels ? voiceBuffer.getChannelData(ch) : voiceBuffer.getChannelData(0);
+    const bgCh = bgBuffer ? (ch < bgBuffer.numberOfChannels ? bgBuffer.getChannelData(ch) : bgBuffer.getChannelData(0)) : null;
+
+    for (let i = 0; i < length; i++) {
+      let sample = 0;
+      if (i < voiceBuffer.length) sample += voiceCh[i];
+      if (bgCh && i < bgBuffer.length) sample += bgCh[i] * bgVolume;
+      // Soft clip to prevent distortion
+      output[i] = Math.max(-1, Math.min(1, sample));
+    }
+  }
+  return mixed;
+}
+
+// Encode AudioBuffer to WAV blob
+function audioBufferToWav(buffer) {
+  const numChannels = buffer.numberOfChannels;
+  const sampleRate = buffer.sampleRate;
+  const format = 1; // PCM
+  const bitsPerSample = 16;
+  const bytesPerSample = bitsPerSample / 8;
+  const blockAlign = numChannels * bytesPerSample;
+  const dataLength = buffer.length * blockAlign;
+  const headerLength = 44;
+  const totalLength = headerLength + dataLength;
+
+  const arrayBuffer = new ArrayBuffer(totalLength);
+  const view = new DataView(arrayBuffer);
+
+  function writeString(offset, str) {
+    for (let i = 0; i < str.length; i++) {
+      view.setUint8(offset + i, str.charCodeAt(i));
+    }
+  }
+
+  writeString(0, 'RIFF');
+  view.setUint32(4, totalLength - 8, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, format, true);
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * blockAlign, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bitsPerSample, true);
+  writeString(36, 'data');
+  view.setUint32(40, dataLength, true);
+
+  let offset = 44;
+  for (let i = 0; i < buffer.length; i++) {
+    for (let ch = 0; ch < numChannels; ch++) {
+      const sample = buffer.getChannelData(ch)[i];
+      const clamped = Math.max(-1, Math.min(1, sample));
+      const intSample = clamped < 0 ? clamped * 0x8000 : clamped * 0x7FFF;
+      view.setInt16(offset, intSample, true);
+      offset += 2;
+    }
+  }
+
+  return new Blob([arrayBuffer], { type: 'audio/wav' });
+}
+
 export default function HypnosisGeneratorForm() {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({
@@ -229,7 +232,13 @@ export default function HypnosisGeneratorForm() {
     sensory3: "",
     music: "ambient-pads",
   });
-  const [ssml, setSSML] = useState("");
+
+  // Generation state
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [genProgress, setGenProgress] = useState({ current: 0, total: 76, section: '' });
+  const [genError, setGenError] = useState(null);
+  const [audioUrl, setAudioUrl] = useState(null);
+  const cancelRef = useRef(false);
 
   useEffect(() => {
     document.title = "Build Your Self-Hypnosis | Mind Refuge";
@@ -251,6 +260,13 @@ export default function HypnosisGeneratorForm() {
     document.head.appendChild(style);
   }, []);
 
+  // Cleanup blob URL on unmount
+  useEffect(() => {
+    return () => {
+      if (audioUrl) URL.revokeObjectURL(audioUrl);
+    };
+  }, [audioUrl]);
+
   const update = (key, val) => setForm(prev => ({ ...prev, [key]: val }));
 
   const canNext = () => {
@@ -259,14 +275,114 @@ export default function HypnosisGeneratorForm() {
     return true;
   };
 
+  const generateSession = useCallback(async () => {
+    cancelRef.current = false;
+    setIsGenerating(true);
+    setGenError(null);
+    setAudioUrl(null);
+    setStep(5);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    try {
+      // Prepare the script with user's form data
+      const safePlaceLabel = form.safePlace
+        ? SAFE_PLACE_OPTIONS.find(o => o.id === form.safePlace)?.label.toLowerCase() || form.safePlace
+        : '';
+      const scriptClips = prepareScript({
+        focus: FOCUS_OPTIONS.find(o => o.id === form.focus)?.label.toLowerCase() || form.focus,
+        trigger: form.trigger,
+        bodyCue1: form.bodyCue1,
+        bodyCue2: form.bodyCue2,
+        safePlace: safePlaceLabel,
+        sensory1: form.sensory1,
+        sensory2: form.sensory2,
+        sensory3: form.sensory3,
+      });
+
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const clipBuffers = [];
+
+      // Generate each clip via the API
+      for (let i = 0; i < scriptClips.length; i++) {
+        if (cancelRef.current) return;
+
+        const clip = scriptClips[i];
+        setGenProgress({ current: i + 1, total: scriptClips.length, section: clip.section });
+
+        const response = await fetch('/api/generateClip', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: clip.text }),
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.error || `Failed to generate clip ${clip.id}`);
+        }
+
+        const audioData = await response.arrayBuffer();
+        const audioBuffer = await audioCtx.decodeAudioData(audioData);
+        clipBuffers.push({ buffer: audioBuffer, pauseAfter: clip.pauseAfter });
+      }
+
+      if (cancelRef.current) return;
+
+      // Calculate total voice track length
+      let totalLength = 0;
+      for (const { buffer, pauseAfter } of clipBuffers) {
+        totalLength += buffer.length + Math.floor(audioCtx.sampleRate * pauseAfter);
+      }
+
+      // Create stitched voice track
+      const voiceTrack = audioCtx.createBuffer(1, totalLength, audioCtx.sampleRate);
+      const voiceData = voiceTrack.getChannelData(0);
+      let offset = 0;
+
+      for (const { buffer, pauseAfter } of clipBuffers) {
+        const clipData = buffer.getChannelData(0);
+        voiceData.set(clipData, offset);
+        offset += buffer.length;
+        // Silence gap is already zeroed
+        offset += Math.floor(audioCtx.sampleRate * pauseAfter);
+      }
+
+      // Load BB+ISO background track
+      let bgBuffer = null;
+      try {
+        const bgResponse = await fetch('/images/bb-iso-track.mp3');
+        if (bgResponse.ok) {
+          const bgData = await bgResponse.arrayBuffer();
+          bgBuffer = await audioCtx.decodeAudioData(bgData);
+        }
+      } catch {
+        // Continue without background track if it fails to load
+      }
+
+      // Mix: voice at 100%, BB+ISO at ~18% (-15 dB)
+      const bbIsoVolume = 0.18;
+      const finalBuffer = mixAudioBuffers(audioCtx, voiceTrack, bgBuffer, bbIsoVolume);
+
+      // Encode to WAV and create blob URL
+      const wavBlob = audioBufferToWav(finalBuffer);
+      const url = URL.createObjectURL(wavBlob);
+
+      setAudioUrl(url);
+      setIsGenerating(false);
+      await audioCtx.close();
+    } catch (err) {
+      if (!cancelRef.current) {
+        setGenError(err.message || 'An unexpected error occurred');
+        setIsGenerating(false);
+      }
+    }
+  }, [form]);
+
   const next = () => {
     if (step < 4) {
       setStep(step + 1);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } else {
-      setSSML(buildSSML(form));
-      setStep(5);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      generateSession();
     }
   };
 
@@ -275,6 +391,22 @@ export default function HypnosisGeneratorForm() {
       setStep(step - 1);
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
+  };
+
+  const startOver = () => {
+    cancelRef.current = true;
+    if (audioUrl) URL.revokeObjectURL(audioUrl);
+    setAudioUrl(null);
+    setIsGenerating(false);
+    setGenError(null);
+    setGenProgress({ current: 0, total: 76, section: '' });
+    setStep(0);
+    setForm({
+      focus: "", trigger: "", bodyCue1: "", bodyCue2: "",
+      safePlace: "", sensory1: "", sensory2: "", sensory3: "",
+      music: "ambient-pads",
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const stepTitles = [
@@ -315,7 +447,21 @@ export default function HypnosisGeneratorForm() {
 
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "48px 24px 80px" }}>
 
-        {step < 5 ? (
+        {/* Step 5: Generating or Player */}
+        {step === 5 ? (
+          isGenerating || genError ? (
+            <GeneratingView
+              currentClip={genProgress.current}
+              totalClips={genProgress.total}
+              currentSection={genProgress.section}
+              error={genError}
+              onRetry={generateSession}
+            />
+          ) : audioUrl ? (
+            <PlayerView audioUrl={audioUrl} onStartOver={startOver} />
+          ) : null
+        ) : (
+          /* Steps 0-4: Form */
           <div style={{ animation: "fadeUp 0.5s ease both" }} key={step}>
             <ProgressBar step={step} total={5} />
 
@@ -454,78 +600,6 @@ export default function HypnosisGeneratorForm() {
                   transition: "all 0.2s ease",
                 }}
               >{step === 4 ? "Generate Session" : "Continue"}</button>
-            </div>
-          </div>
-        ) : (
-          /* Step 5: SSML Preview */
-          <div style={{ animation: "fadeUp 0.5s ease both" }}>
-            <div style={{ textAlign: "center", marginBottom: 32 }}>
-              <div style={{
-                width: 64, height: 64, borderRadius: "50%",
-                background: `linear-gradient(135deg, ${SAGE}, ${SAGE_LIGHT})`,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                margin: "0 auto 20px", fontSize: 28, color: WHITE,
-              }}>&#10003;</div>
-              <h1 style={{
-                fontSize: "clamp(24px, 3.5vw, 32px)", fontWeight: 700,
-                lineHeight: 1.25, marginBottom: 8,
-              }}>Your Session is Ready</h1>
-              <p style={{ fontSize: 15, color: TEXT_MID }}>
-                Below is the generated SSML script for your personalized self-hypnosis session.
-              </p>
-            </div>
-
-            <div style={{
-              background: WHITE,
-              border: "1px solid #E8ECEA",
-              borderRadius: 16,
-              padding: 24,
-              maxHeight: 500,
-              overflow: "auto",
-            }}>
-              <pre style={{
-                fontSize: 12,
-                lineHeight: 1.6,
-                color: TEXT_MID,
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-word",
-                fontFamily: "'Courier New', monospace",
-              }}>{ssml}</pre>
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 32 }}>
-              <button
-                type="button"
-                onClick={() => { setStep(0); setSSML(""); }}
-                style={{
-                  padding: "14px 32px",
-                  borderRadius: 60,
-                  border: `2px solid ${SAGE}`,
-                  background: "transparent",
-                  color: SAGE_DEEP,
-                  fontSize: 15,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  fontFamily: "'Poppins', sans-serif",
-                }}
-              >Start Over</button>
-              <button
-                type="button"
-                onClick={() => {
-                  navigator.clipboard.writeText(ssml);
-                }}
-                style={{
-                  padding: "14px 32px",
-                  borderRadius: 60,
-                  border: "none",
-                  background: SAGE,
-                  color: WHITE,
-                  fontSize: 15,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  fontFamily: "'Poppins', sans-serif",
-                }}
-              >Copy SSML</button>
             </div>
           </div>
         )}
